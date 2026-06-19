@@ -16,7 +16,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TEMPLATE_FILE="$PROJECT_ROOT/config.bu.template"
 BUILD_DIR="$PROJECT_ROOT/build"
 OUTPUT_FILE="$BUILD_DIR/config.ign"
-REQUIRED_KEY="$HOME/.ssh/id_homeassistant.pub"
+REQUIRED_KEY="$HOME/.ssh/id_homeserver.pub"
 
 # --- 2. RILEVAMENTO CONTAINER ENGINE ---
 if command -v podman &> /dev/null; then
@@ -37,7 +37,7 @@ fi
 if [ ! -f "$REQUIRED_KEY" ]; then
     echo "❌ ERRORE FATALE: Chiave SSH mancante!"
     echo "   Percorso atteso: $REQUIRED_KEY"
-    echo "   Generala con: ssh-keygen -t ed25519 -C \"admin@homeassistant\" -f ~/.ssh/id_homeassistant"
+    echo "   Generala con: ssh-keygen -t ed25519 -C \"admin@homeserver\" -f ~/.ssh/id_homeserver"
     exit 1
 fi
 
@@ -58,10 +58,11 @@ echo "⚙️  Generazione file Ignition in: $OUTPUT_FILE"
 
 # --- 5. ESECUZIONE (BUTANE) ---
 # Sostituzione placeholder + Conversione Butane
-# Usiamo l'immagine Docker ufficiale di Butane per non dover installare tool locali
 sed "s|%%SSH_PUB_KEY%%|$SSH_KEY_CONTENT|g" "$TEMPLATE_FILE" | \
-$ENGINE run $ARGS --interactive --rm quay.io/coreos/butane:release \
-       --pretty --strict > "$OUTPUT_FILE"
+$ENGINE run $ARGS --interactive --rm \
+       -v "$(pwd)":/cwd -w /cwd \
+       quay.io/coreos/butane:release \
+       --pretty --strict --files-dir /cwd > "$OUTPUT_FILE"
 
 # Verifica risultato (ridondante con set -e, ma utile per feedback visivo)
 if [ -f "$OUTPUT_FILE" ]; then

@@ -124,7 +124,7 @@ Logica "Smart Restore":
 ## 5. Accesso Esterno & Troubleshooting
 
 ### URL di Accesso
-* Esterno (HTTPS): https://tuosottodominio.duckdns.org
+* Esterno (HTTPS): https://angiogo.duckdns.org
 * Locale (HTTP): http://192.168.1.100:8123
 
 ### Problemi Comuni

@@ -3,6 +3,7 @@ version: 1.5.0
 passwd:
   users:
     - name: core
+      password_hash: $6$I1Z/bohQLzHIju1j$J.43n1DeYKJWhuR5B9MmHRlf9wUtVeJlec4vXOYK5MlJ87C9yuQHVvq0J27PVb/5Nd43KBQvlxE3SCQCnygLe/
       ssh_authorized_keys:
         - "%%SSH_PUB_KEY%%"
       groups:

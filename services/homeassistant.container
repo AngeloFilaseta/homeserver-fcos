@@ -8,6 +8,9 @@ Image=ghcr.io/home-assistant/home-assistant:stable
 ContainerName=homeassistant
 AutoUpdate=registry
 
+# --- PASSTHROUGH USB ZIGBEE ---
+AddDevice=/dev/ttyUSB0:/dev/ttyUSB0
+
 # Disabilita l'isolamento SELinux per comunicare con l'hardware host
 SecurityLabelDisable=true
 
