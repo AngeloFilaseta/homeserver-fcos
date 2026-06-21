@@ -1,5 +1,6 @@
 #!/usr/bin/env kotlin
-@file:Import("./lib.kt")
+
+@file:Import("./libs/util.kt")
 
 import java.io.File
 import java.nio.file.Files
@@ -216,9 +217,14 @@ fun installHacsIfMissing() {
 
 // ─── Step 8: Status Report ────────────────────────────────────────────────────
 
-data class ServiceStatus(val name: String, val active: String, val sub: String) {
+data class ServiceStatus(
+    val name: String,
+    val active: String,
+    val sub: String,
+) {
     val isOk get() = active == "active"
     val icon get() = if (isOk) "✅" else "❌"
+
     override fun toString() = "$icon  %-45s $active ($sub)".format(name)
 }
 

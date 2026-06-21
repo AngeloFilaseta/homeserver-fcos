@@ -1,6 +1,6 @@
 #!/usr/bin/env kotlin
 
-@file:Import("./lib.kt")
+@file:Import("./libs/util.kt")
 
 import java.io.File
 import java.nio.file.Paths
@@ -85,22 +85,18 @@ if (servicesDir.exists() && servicesDir.isDirectory) {
 val scriptsDir = File(projectRoot, "scripts")
 if (scriptsDir.exists() && scriptsDir.isDirectory) {
     print("📦 Sincronizzazione 'scripts'... ")
-    runRemote(remoteTarget, "rm -rf ~/scripts/ && mkdir -p ~/scripts", quiet = true)
-    scriptsDir.listFiles()?.filter { it.isFile }?.forEach { file ->
-        val ok = scpRemote(remoteTarget, file.absolutePath, "~/scripts/", quiet = true)
-        if (!ok) {
-            println("❌")
-            println("❌ Errore durante il trasferimento di ${file.absolutePath}")
-            System.exit(1)
-        }
+    runRemote(remoteTarget, "rm -rf ~/scripts/", quiet = true)
+    val ok = scpRemote(remoteTarget, scriptsDir.absolutePath, "~/", quiet = true)
+    if (!ok) {
+        println("❌ Errore durante il trasferimento della cartella scripts")
+        System.exit(1)
     }
-    println("✅")
 } else {
     println("⚠️  ATTENZIONE: Cartella 'scripts' non trovata in locale!")
     System.exit(1)
 }
 
-val installKotlinCommand = "bash ./scripts/install_kotlin_fcos.sh"
+val installKotlinCommand = "bash ./scripts/libs/install_kotlin_fcos.sh"
 
 println("\n--- ⚙️  Installazione Kotlin su Homeserver Remoto ---")
 
