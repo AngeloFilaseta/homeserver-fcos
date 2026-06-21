@@ -18,7 +18,6 @@ LOCAL_BACKUP_DIR="$PROJECT_ROOT/backups"
 
 # File Critici da forzare post-restore
 LOCAL_CADDYFILE="$PROJECT_ROOT/Caddyfile"
-LOCAL_SECRETS="$PROJECT_ROOT/secrets.env"
 
 # 2. Selezione del Backup
 if [ -n "$1" ]; then
