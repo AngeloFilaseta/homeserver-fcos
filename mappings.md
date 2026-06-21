@@ -6,14 +6,13 @@
 | Synology NAS              | 192.168.1.198 |
 |                           |               |
 
-## NAS NFS Mount
+## NAS Structure (NFS Mount: /var/mnt/nas/smarthome)
 
-| Mountpoint (FCOS)         | /mnt/nas                      |
-|---------------------------|-------------------------------|
-| Config file               | services/nas.fstab            |
-| Export examples           | 192.168.1.198:/volume1/share1, /share2, /share3 |
+| Path                                              | Purpose                        |
+|---------------------------------------------------|--------------------------------|
+| /var/mnt/nas/smarthome/                           | Root                           |
+| /var/mnt/nas/smarthome/homeassistant/config       | Home Assistant configuration   |
 
 ## Fedora Core OS Ports
 
 | Home Assistant            | 8123    |
-|                           |         |

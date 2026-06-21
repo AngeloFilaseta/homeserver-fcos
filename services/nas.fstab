@@ -1,5 +1,5 @@
 # Formato: <server:/export> <mountpoint> <type> <options> <dump> <pass>
-# Nota: x-systemd.automount crea automount automatico on-demand.
-
-192.168.1.198:/volume1/media /mnt/nas/media nfs defaults,_netdev,nofail,noatime,x-systemd.automount,x-systemd.idle-timeout=10min,timeo=14,retrans=3 0 0
-192.168.1.198:/volume1/smarthome /mnt/nas/smarthome nfs defaults,_netdev,nofail,noatime,x-systemd.automount,x-systemd.idle-timeout=10min,timeo=14,retrans=3 0 0
+# media: automount on-demand (opzionale, non critico)
+192.168.1.198:/volume1/media /var/mnt/nas/media nfs defaults,_netdev,nofail,noatime,x-systemd.automount,x-systemd.idle-timeout=10min,timeo=14,retrans=3 0 0
+# smarthome: mount fisso al boot (richiesto da homeassistant.service)
+192.168.1.198:/volume1/smarthome /var/mnt/nas/smarthome nfs defaults,_netdev,nofail,noatime,timeo=14,retrans=3 0 0

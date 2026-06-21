@@ -60,7 +60,7 @@ storage:
       group:
         name: core
 
-    - path: /mnt/nas
+    - path: /var/mnt/nas
       mode: 0755
       user:
         name: core

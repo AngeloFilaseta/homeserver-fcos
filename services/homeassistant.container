@@ -1,7 +1,9 @@
 [Unit]
 Description=Home Assistant (Rootful System Container)
-After=network-online.target bluetooth.service
+After=network-online.target bluetooth.service var-mnt-nas-smarthome.mount
 Wants=bluetooth.service
+Requires=var-mnt-nas-smarthome.mount
+RequiresMountsFor=/var/mnt/nas/smarthome
 
 [Container]
 Image=ghcr.io/home-assistant/home-assistant:stable
@@ -19,12 +21,12 @@ SecurityLabelDisable=true
 AddCapability=NET_ADMIN
 AddCapability=NET_RAW
 
-# Percorsi ASSOLUTI ai file del tuo NAS (Esempio se sposti anche il file env)
-EnvironmentFile=/var/mnt/nas/smarthome/secrets.env
+# Percorsi ASSOLUTI al NAS smarthome
+Environment=TZ=Europe/Rome
 Network=host
 
 # Volumi (Rimosso il flag :Z perché l'NFS non supporta le etichette SELinux locali)
-Volume=/var/mnt/nas/smarthome/config:/config
+Volume=/var/mnt/nas/smarthome/homeassistant/config:/config
 Volume=/run/dbus:/run/dbus:ro
 Volume=/etc/machine-id:/etc/machine-id:ro
 
