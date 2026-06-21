@@ -36,6 +36,12 @@ storage:
       contents:
         local: services/homeassistant.container
 
+    # --- TEMPLATE FSTAB NAS (NFS) ---
+    - path: /var/home/core/services/nas.fstab
+      mode: 0644
+      contents:
+        local: services/nas.fstab
+
   directories:
     # Cartella principale Home Assistant e Configurazione
     # Manteniamo la proprietà all'utente core in modo che tu possa
@@ -53,6 +59,14 @@ storage:
         name: core
       group:
         name: core
+
+    - path: /mnt/nas
+      mode: 0755
+      user:
+        name: core
+      group:
+        name: core
+
 
 systemd:
   units:

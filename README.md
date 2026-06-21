@@ -96,6 +96,28 @@ Questo script:
 2.  Aggiorna il file dei segreti.
 3.  Ricarica Systemd e riavvia i servizi necessari automaticamente.
 
+### Mount automatico NAS (NFS)
+Il repository ora usa **un singolo file** per tutti i mount NFS:
+
+* File: `services/nas.fstab`
+* Ogni riga = una share NFS
+* Automount on-demand tramite opzione `x-systemd.automount`
+
+Prima del deploy, modifica `services/nas.fstab` con i tuoi export reali.
+
+Poi applica con il normale flusso:
+
+```bash
+./scripts/push_update.sh
+```
+
+Verifica sul server:
+
+```bash
+sudo systemctl list-units --type=automount | grep mnt-nas
+findmnt | grep '/mnt/nas/'
+```
+
 ============================================================
 
 ## 4. Backup & Disaster Recovery

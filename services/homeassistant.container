@@ -19,12 +19,12 @@ SecurityLabelDisable=true
 AddCapability=NET_ADMIN
 AddCapability=NET_RAW
 
-# Percorsi ASSOLUTI ai file dell'utente core
-EnvironmentFile=/var/home/core/homeassistant/secrets.env
+# Percorsi ASSOLUTI ai file del tuo NAS (Esempio se sposti anche il file env)
+EnvironmentFile=/var/mnt/nas/smarthome/secrets.env
 Network=host
 
-# Volumi
-Volume=/var/home/core/homeassistant/config:/config:Z
+# Volumi (Rimosso il flag :Z perché l'NFS non supporta le etichette SELinux locali)
+Volume=/var/mnt/nas/smarthome/config:/config
 Volume=/run/dbus:/run/dbus:ro
 Volume=/etc/machine-id:/etc/machine-id:ro
 
