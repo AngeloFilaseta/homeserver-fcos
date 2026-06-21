@@ -92,6 +92,16 @@ Questo script:
 1.  Copia le configurazioni aggiornate (services/, scripts/) sul server.
 2.  Ricarica Systemd e riavvia i servizi necessari automaticamente.
 
+### (Opzionale) Installare Kotlin su Fedora CoreOS
+Se vuoi usare il deploy remoto in Kotlin (`deploy_app.main.kts`) anche sul server:
+
+```bash
+chmod +x ./scripts/install_kotlin_fcos.sh
+./scripts/install_kotlin_fcos.sh
+```
+
+Dopo l'installazione è richiesto un reboot del server.
+
 ### Mount automatico NAS (NFS) - Struttura Smarthome
 
 Il repository ora usa **un singolo file** per il mount NFS:

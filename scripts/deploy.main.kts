@@ -11,8 +11,12 @@ val REMOTE_NAS_SMARTHOME = "/var/mnt/nas/smarthome"
 
 val REMOTE_NAS_HA = "$REMOTE_NAS_SMARTHOME/homeassistant"
 
-val scriptDir = Paths.get("").toAbsolutePath().toFile()
-val projectRoot = scriptDir.parentFile ?: scriptDir
+val cwd = Paths.get("").toAbsolutePath().toFile()
+val projectRoot = when {
+    File(cwd, "services").isDirectory && File(cwd, "scripts").isDirectory -> cwd
+    File(cwd, "../services").isDirectory && File(cwd, "../scripts").isDirectory -> File(cwd, "..").canonicalFile
+    else -> cwd
+}
 
 println("🚀 Inizio aggiornamento su: $SERVER_HOST")
 
@@ -85,22 +89,29 @@ if (!dirCreated) {
 // 2.1 Services - clear server dir first to remove stale files
 val servicesDir = File(projectRoot, "services")
 if (servicesDir.exists() && servicesDir.isDirectory) {
-    sshCommand("rm -rf ~/services/")
-    scp(servicesDir.absolutePath + "/", "~/")
+    sshCommand("rm -rf ~/services/ && mkdir -p ~/services")
+    servicesDir.listFiles()?.filter { it.isFile }?.forEach { file ->
+        scp(file.absolutePath, "~/services/")
+    }
 } else {
     println("⚠️  ATTENZIONE: Cartella 'services' non trovata in locale!")
+    System.exit(1)
 }
 
 // 2.2 Scripts
 val scriptsDir = File(projectRoot, "scripts")
 if (scriptsDir.exists() && scriptsDir.isDirectory) {
-    scp(scriptsDir.absolutePath + "/", "~/")
+    sshCommand("rm -rf ~/scripts/ && mkdir -p ~/scripts")
+    scriptsDir.listFiles()?.filter { it.isFile }?.forEach { file ->
+        scp(file.absolutePath, "~/scripts/")
+    }
 } else {
     println("⚠️  ATTENZIONE: Cartella 'scripts' non trovata in locale!")
+    System.exit(1)
 }
 
 println("\n--- ⚙️  Esecuzione Deploy Remoto ---")
-val remoteCommand = "chmod +x scripts/deploy_app.sh && ./scripts/deploy_app.sh"
+val remoteCommand = "if command -v kotlin >/dev/null 2>&1 && command -v java >/dev/null 2>&1 && kotlin -version >/dev/null 2>&1; then chmod +x ./scripts/deploy_app.main.kts && ./scripts/deploy_app.main.kts; else echo '⚠️ kotlin/java non disponibili o non funzionanti sul server.'; echo '   Per installare: chmod +x ./scripts/install_kotlin_fcos.sh && ./scripts/install_kotlin_fcos.sh'; echo '   (se usa rpm-ostree: reboot richiesto)'; echo '   Uso fallback a deploy_app.sh'; chmod +x ./scripts/deploy_app.sh && ./scripts/deploy_app.sh; fi"
 val deploySuccess = sshCommand(remoteCommand)
 
 if (deploySuccess) {
