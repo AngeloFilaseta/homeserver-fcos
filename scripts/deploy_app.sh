@@ -8,7 +8,7 @@ echo "🚀 Inizio Deploy dell'infrastruttura..."
 # Definizioni Percorsi
 USER_CONFIG_DIR="$HOME/.config/containers/systemd"
 SYS_CONFIG_DIR="/etc/containers/systemd"
-HA_DIR="$HOME/homeassistant"
+NAS_SMARTHOME="/var/mnt/nas/smarthome"
 SERVICES_SRC="$HOME/services"
 NAS_FSTAB_SRC="$SERVICES_SRC/nas.fstab"
 
@@ -16,21 +16,19 @@ NAS_FSTAB_SRC="$SERVICES_SRC/nas.fstab"
 echo "📂 Creazione struttura directory..."
 mkdir -p "$USER_CONFIG_DIR"
 sudo mkdir -p "$SYS_CONFIG_DIR"
-mkdir -p "$HA_DIR"
-mkdir -p "$HA_DIR/config"
-mkdir -p "$HA_DIR/caddy/data"
-mkdir -p "$HA_DIR/caddy/config"
-
-# 2. Controllo Caddyfile
-if [ ! -f "$HA_DIR/Caddyfile" ]; then
-    echo "⚠️  ATTENZIONE: Caddyfile non trovato in $HA_DIR!"
-    echo "    Caddy potrebbe non partire correttamente."
-else
-    echo "✅ Caddyfile rilevato in posizione corretta."
-fi
+# Directory sul NAS
+sudo mkdir -p "$NAS_SMARTHOME/homeassistant/config"
+# Nota: chown su NFS può fallire (permission denied) - ignoriamo gli errori
+sudo chown -R "$USER:$USER" "$NAS_SMARTHOME" 2>/dev/null || true
 
 # 3. Installazione Servizi (Smistamento Ibrido)
 echo "🐳 Installazione definizioni Container..."
+
+# Cleanup file obsoleti sul server (es. rimossi dal repo)
+for stale in "$USER_CONFIG_DIR"/duckdns.container "$USER_CONFIG_DIR"/journiv.container "$USER_CONFIG_DIR"/caddy.container; do
+    [ -f "$stale" ] && sudo rm -f "$stale" && echo "   -> Rimosso obsoleto: $(basename $stale)"
+done
+
 if [ -d "$SERVICES_SRC" ]; then
     for file in "$SERVICES_SRC"/*; do
         [ -f "$file" ] || continue
@@ -62,6 +60,16 @@ else
     echo "❌ ERRORE: Cartella $SERVICES_SRC non trovata!"
     exit 1
 fi
+
+# 3.0.1 Rimuovi unità legacy mnt-nas (vecchio setup con file .mount/.automount espliciti)
+for legacy in /etc/systemd/system/mnt-nas.mount /etc/systemd/system/mnt-nas.automount; do
+    if [ -f "$legacy" ]; then
+        unit=$(basename "$legacy")
+        sudo systemctl disable --now "$unit" 2>/dev/null || true
+        sudo rm -f "$legacy"
+        echo "   -> Rimossa unità legacy: $unit"
+    fi
+done
 
 # 3.1 Gestione mount NAS da file unico fstab
 if [ -f "$NAS_FSTAB_SRC" ]; then
@@ -111,20 +119,32 @@ fi
 echo "🔄 Ricaricamento Systemd..."
 systemctl --user daemon-reload
 sudo systemctl daemon-reload
+
+# Ferma l'automount stale (da vecchio fstab con x-systemd.automount), poi monta il NAS
+echo "💾 Attivazione mount NAS smarthome..."
+sudo systemctl stop var-mnt-nas-smarthome.automount 2>/dev/null || true
+sudo systemctl start var-mnt-nas-smarthome.mount || {
+    echo "⚠️  mount diretto fallito, fallback mount -a..."
+    sudo mount -a 2>/dev/null || true
+}
 sudo systemctl restart remote-fs.target || true
+
+# Verifica mount prima di avviare HA
+if ! mountpoint -q /var/mnt/nas/smarthome 2>/dev/null; then
+    echo "❌ /var/mnt/nas/smarthome non montato! HA non può partire."
+    exit 1
+fi
+echo "✅ /var/mnt/nas/smarthome montato correttamente."
 
 # 5. Riavvio Servizi
 echo "▶️  Riavvio servizi..."
-# Riavvio servizi utente (ignoriamo errori se non esistono ancora)
-systemctl --user restart caddy.service || true
-systemctl --user restart duckdns.service || true
-# Riavvio servizio di sistema
+# Riavvio servizi
 sudo systemctl restart homeassistant.service || true
 
 # 5.1 Auto-Installazione HACS (Se mancante)
 echo "🔍 Controllo presenza HACS..."
 
-HACS_DIR="$HA_DIR/config/custom_components/hacs"
+HACS_DIR="$NAS_SMARTHOME/homeassistant/config/custom_components/hacs"
 
 # Attendiamo che HA sia partito
 sleep 10
@@ -148,8 +168,6 @@ fi
 echo ""
 echo "📊 Stato dei servizi:"
 echo "---------------------"
-systemctl --user status caddy.service --no-pager | grep "Active:" || echo "❌ Caddy non attivo"
-systemctl --user status duckdns.service --no-pager | grep "Active:" || echo "❌ DuckDNS non attivo"
 sudo systemctl status homeassistant.service --no-pager | grep "Active:" || echo "❌ Home Assistant non attivo"
 
 echo ""
