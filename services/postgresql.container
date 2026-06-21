@@ -1,0 +1,22 @@
+[Unit]
+Description=PostgreSQL (Rootful System Container)
+After=network-online.target var-mnt-nas-db.mount var-mnt-nas-secrets.mount
+Wants=network-online.target
+Requires=var-mnt-nas-db.mount var-mnt-nas-secrets.mount
+RequiresMountsFor=/var/mnt/nas/secrets /var/mnt/nas/db
+
+[Container]
+Image=docker.io/library/postgres:16
+ContainerName=postgresql
+AutoUpdate=registry
+
+EnvironmentFile=/var/mnt/nas/secrets/secrets.env
+Environment=TZ=Europe/Rome
+
+Network=host
+User=99
+Volume=/var/mnt/nas/db/postgres:/var/lib/postgresql/data
+
+[Install]
+WantedBy=multi-user.target
+

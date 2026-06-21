@@ -1,17 +1,10 @@
 #!/usr/bin/env kotlin
 
 @file:Import("./libs/util.kt")
+@file:Import("./libs/const.kt")
 
 import java.io.File
 import java.nio.file.Paths
-
-val serverHost = "fcos-ha"
-val hostUser = "core"
-val remoteTarget = "$hostUser@$serverHost"
-// Percorsi sul NAS smarthome
-val remoteNasSmartHome = "/var/mnt/nas/smarthome"
-
-val remoteNasHomeAssistant = "$remoteNasSmartHome/homeassistant"
 
 val cwd = Paths.get("").toAbsolutePath().toFile()
 val projectRoot =
@@ -21,7 +14,7 @@ val projectRoot =
         else -> cwd
     }
 
-println("🚀 Inizio aggiornamento su: $serverHost")
+println("🚀 Inizio aggiornamento su: ${Server.host}")
 
 println("📂 Project Root rilevata: ${projectRoot.absolutePath}\n")
 
@@ -30,7 +23,7 @@ println("⏳ Attesa per il mount NAS...")
 var mountReady = false
 
 for (attempts in 1..5) {
-    val success = runRemote(remoteTarget, "ls $remoteNasSmartHome 2>/dev/null")
+    val success = runRemote("ls ${Nas.smartHomePath} 2>/dev/null")
 
     if (success) {
         println("✅ NAS mount attivo!")
@@ -49,7 +42,7 @@ if (!mountReady) {
 println("📁 Creazione struttura NAS...")
 var dirCreated = false
 for (attempt in 1..5) {
-    if (runRemote(remoteTarget, "sudo mkdir -p $remoteNasHomeAssistant/config")) {
+    if (runRemote("sudo mkdir -p ${Nas.homeAssistantPath}/config")) {
         dirCreated = true
         break
     }
@@ -66,9 +59,9 @@ if (!dirCreated) {
 val servicesDir = File(projectRoot, "services")
 if (servicesDir.exists() && servicesDir.isDirectory) {
     print("📦 Sincronizzazione 'services'... ")
-    runRemote(remoteTarget, "rm -rf ~/services/ && mkdir -p ~/services", quiet = true)
+    runRemote("rm -rf ~/services/ && mkdir -p ~/services", quiet = true)
     servicesDir.listFiles()?.filter { it.isFile }?.forEach { file ->
-        val ok = scpRemote(remoteTarget, file.absolutePath, "~/services/", quiet = true)
+        val ok = scpRemote(file.absolutePath, "~/services/", quiet = true)
         if (!ok) {
             println("❌")
             println("❌ Errore durante il trasferimento di ${file.absolutePath}")
@@ -81,12 +74,57 @@ if (servicesDir.exists() && servicesDir.isDirectory) {
     System.exit(1)
 }
 
+val secretsFile = File(projectRoot, "secrets.env")
+if (secretsFile.isFile) {
+    val envMap =
+        secretsFile
+            .readLines()
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+            .associate { line -> line.substringBefore("=") to line.substringAfter("=") }
+
+    val requiredJournivSecrets =
+        mapOf(
+            "journiv_secret_key" to "JOURNIV_SECRET_KEY",
+            "oidc_client_secret" to "OIDC_CLIENT_SECRET",
+            "postgres_password" to "POSTGRES_PASSWORD",
+        )
+
+    requiredJournivSecrets.forEach { (_, envName) ->
+        val value =
+            envMap[envName]?.takeIf { it.isNotBlank() }
+                ?: run {
+                    println("❌ Variabile obbligatoria mancante in secrets.env: $envName")
+                    System.exit(1)
+                    ""
+                }
+        if (value.startsWith("CHANGE_ME")) {
+            println("❌ Variabile $envName non valorizzata: sostituisci il placeholder '$value'")
+            System.exit(1)
+        }
+    }
+
+    print("🔐 Sincronizzazione 'secrets.env'... ")
+    val ok = scpRemote(secretsFile.absolutePath, "~/secrets.env", quiet = true)
+    if (!ok) {
+        println("❌")
+        println("❌ Errore durante il trasferimento di ${secretsFile.absolutePath}")
+        System.exit(1)
+    }
+    println("✅")
+
+} else {
+    println("⚠️  ATTENZIONE: secrets.env non trovato in locale!")
+    System.exit(1)
+}
+
 // 2.2 Scripts
 val scriptsDir = File(projectRoot, "scripts")
 if (scriptsDir.exists() && scriptsDir.isDirectory) {
     print("📦 Sincronizzazione 'scripts'... ")
-    runRemote(remoteTarget, "rm -rf ~/scripts/", quiet = true)
-    val ok = scpRemote(remoteTarget, scriptsDir.absolutePath, "~/", quiet = true)
+    runRemote("rm -rf ~/scripts/", quiet = true)
+    val ok = scpRemote(scriptsDir.absolutePath, "~/", quiet = true)
     if (!ok) {
         println("❌ Errore durante il trasferimento della cartella scripts")
         System.exit(1)
@@ -100,9 +138,7 @@ val installKotlinCommand = "bash ./scripts/libs/install_kotlin_fcos.sh"
 
 println("\n--- ⚙️  Installazione Kotlin su Homeserver Remoto ---")
 
-val kotlinInstallSuccess: Boolean = runRemote(remoteTarget, installKotlinCommand)
-
-if (kotlinInstallSuccess) {
+if (runRemote(installKotlinCommand)) {
     println("\n✅ Kotlin installato con successo!")
 } else {
     println("\n❌ Errore durante l'installazione di Kotlin.")
@@ -111,9 +147,10 @@ if (kotlinInstallSuccess) {
 
 println("\n--- ⚙️  Deploy su Homeserver Remoto ---")
 
-val remoteCommand: String = "chmod +x ./scripts/deployRemote.main.kts && ./scripts/deployRemote.main.kts"
-
-val deploySuccess: Boolean = runRemote(remoteTarget, remoteCommand)
+val deploySuccess: Boolean =
+    runRemote(
+        "chmod +x ./scripts/deployRemote.main.kts && ./scripts/deployRemote.main.kts",
+    )
 
 if (deploySuccess) {
     println("\n✅ Aggiornamento completato con successo!")

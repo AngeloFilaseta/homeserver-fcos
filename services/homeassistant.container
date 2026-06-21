@@ -1,9 +1,9 @@
 [Unit]
 Description=Home Assistant (Rootful System Container)
-After=network-online.target bluetooth.service var-mnt-nas-smarthome.mount
+After=network-online.target bluetooth.service var-mnt-nas-smarthome.mount var-mnt-nas-secrets.mount
 Wants=bluetooth.service
-Requires=var-mnt-nas-smarthome.mount
-RequiresMountsFor=/var/mnt/nas/smarthome
+Requires=var-mnt-nas-smarthome.mount var-mnt-nas-secrets.mount
+RequiresMountsFor=/var/mnt/nas/smarthome /var/mnt/nas/secrets
 
 [Container]
 Image=ghcr.io/home-assistant/home-assistant:stable
@@ -22,6 +22,7 @@ AddCapability=NET_ADMIN
 AddCapability=NET_RAW
 
 # Percorsi ASSOLUTI al NAS smarthome
+EnvironmentFile=/var/mnt/nas/secrets/secrets.env
 Environment=TZ=Europe/Rome
 Network=host
 

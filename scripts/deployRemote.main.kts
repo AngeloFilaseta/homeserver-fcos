@@ -1,6 +1,7 @@
 #!/usr/bin/env kotlin
 
 @file:Import("./libs/util.kt")
+@file:Import("./libs/const.kt")
 
 import java.io.File
 import java.nio.file.Files
@@ -13,6 +14,8 @@ val user = System.getenv("USER") ?: error("USER not set")
 val userConfigDir = "$home/.config/containers/systemd"
 val sysConfigDir = "/etc/containers/systemd"
 val nasSmarthome = "/var/mnt/nas/smarthome"
+val nasSecretsDir = "/var/mnt/nas/secrets"
+val secretsSrc = "$home/secrets.env"
 val servicesSrc = "$home/services"
 val nasFstabSrc = "$home/services/nas.fstab"
 val hacsDir = "/var/mnt/nas/smarthome/homeassistant/config/custom_components/hacs"
@@ -24,6 +27,45 @@ fun createDirectories() {
     File(userConfigDir).mkdirs()
     sudo("mkdir", "-p", sysConfigDir)
     sudo("mkdir", "-p", "$nasSmarthome/homeassistant/config")
+    sudo("mkdir", "-p", nasSecretsDir)
+    sudo("mkdir", "-p", "${Nas.BASE_MOUNT_POINT}/db/postgres")
+}
+
+fun syncSecretsToNas() {
+    val secretsFile = File(secretsSrc)
+    if (!secretsFile.isFile) {
+        error("❌ ERRORE: File segreti non trovato in $secretsSrc")
+    }
+
+    println("🔐 Pubblicazione secrets.env sul NAS...")
+    sudo("install", "-m", "0600", secretsFile.absolutePath, "$nasSecretsDir/secrets.env")
+
+    val envMap =
+        secretsFile
+            .readLines()
+            .asSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("#") && it.contains("=") }
+            .associate { line -> line.substringBefore("=") to line.substringAfter("=") }
+
+    val journivSecretsFromEnv =
+        mapOf(
+            "journiv_secret_key" to "JOURNIV_SECRET_KEY",
+            "oidc_client_secret" to "OIDC_CLIENT_SECRET",
+            "postgres_password" to "POSTGRES_PASSWORD",
+        )
+
+    journivSecretsFromEnv.forEach { (secretName, envName) ->
+        val value = envMap[envName]?.takeIf { it.isNotBlank() } ?: error("❌ Variabile obbligatoria mancante in secrets.env: $envName")
+        if (value.startsWith("CHANGE_ME")) {
+            error("❌ Variabile $envName non valorizzata: sostituisci il placeholder '$value'")
+        }
+        val tmp = Files.createTempFile("$secretName-", ".tmp").toFile()
+        tmp.writeText(value)
+        sudo("install", "-m", "0600", tmp.absolutePath, "$nasSecretsDir/$secretName")
+        tmp.delete()
+        println("   -> Secret Journiv sincronizzato da $envName: $secretName")
+    }
 }
 
 // ─── Step 2: Container Definitions ────────────────────────────────────────────
@@ -53,7 +95,7 @@ fun installServices() {
         val name = file.name
         when {
             name.endsWith(".container") -> {
-                if (name == "homeassistant.container") {
+                if (name == "homeassistant.container" || name == "postgresql.container" || name == "journiv.container") {
                     println("   -> Copia $name (System/Rootful)")
                     sudo("cp", file.absolutePath, sysConfigDir)
                 } else {
@@ -167,18 +209,32 @@ fun reloadAndMount() {
         println("⚠️  mount diretto fallito, fallback mount -a...")
         sudo("mount", "-a", ignoreFailure = true)
     }
+    systemctl("start", "var-mnt-nas-secrets.mount", ignoreFailure = true)
+    systemctl("start", "var-mnt-nas-db.mount", ignoreFailure = true)
     systemctl("restart", "remote-fs.target", ignoreFailure = true)
 
     if (!isMountPoint(nasSmarthome)) {
         error("❌ $nasSmarthome non montato! HA non può partire.")
     }
     println("✅ $nasSmarthome montato correttamente.")
+
+    if (!isMountPoint("${Nas.BASE_MOUNT_POINT}/db")) {
+        error("❌ ${Nas.BASE_MOUNT_POINT}/db non montato. Verifica l'export NAS '/volume1/db'.")
+    }
+    println("✅ ${Nas.BASE_MOUNT_POINT}/db montato correttamente.")
+
+    if (!isMountPoint(nasSecretsDir)) {
+        error("❌ $nasSecretsDir non montato. Verifica l'export NAS '/volume1/secrets'.")
+    }
+    println("✅ $nasSecretsDir montato correttamente.")
 }
 
 // ─── Step 6: Services Restart ─────────────────────────────────────────────────
 
 fun restartServices() {
     println("▶️  Riavvio servizi...")
+    systemctl("restart", "postgresql.service", ignoreFailure = true)
+    systemctl("restart", "journiv.service", ignoreFailure = true)
     systemctl("restart", "homeassistant.service", ignoreFailure = true)
 }
 
@@ -254,6 +310,10 @@ val monitoredServices =
     listOf(
         "var-mnt-nas-smarthome.mount",
         "var-mnt-nas-media.mount",
+        "var-mnt-nas-secrets.mount",
+        "var-mnt-nas-db.mount",
+        "postgresql.service",
+        "journiv.service",
         "homeassistant.service",
     )
 
@@ -265,6 +325,7 @@ val steps: List<Pair<String, () -> Unit>> =
         "Service installation" to ::installServices,
         "NAS fstab" to ::updateNasFstab,
         "Systemd reload & mount" to ::reloadAndMount,
+        "Secrets sync" to ::syncSecretsToNas,
         "Service restart" to ::restartServices,
         "HACS auto-install" to ::installHacsIfMissing,
         "Status report" to { printStatus(monitoredServices) },

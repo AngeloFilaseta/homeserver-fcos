@@ -14,10 +14,9 @@ Thumbs.db
 # --- HOME ASSISTANT (SICUREZZA & DATABASE) ---
 
 # 1. SEGRETI (CRUCIALE!)
-# Non caricare MAI le password. Usa un file secrets.yaml.example se vuoi.
+# Non caricare MAI le password in YAML. Usa il file unico `secrets.env`.
 **/secrets.yaml
 **/secrets.yaml.bak
-secrets.env
 *.key
 *.pem
 

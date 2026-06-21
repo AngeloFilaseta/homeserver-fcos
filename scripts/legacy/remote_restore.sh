@@ -18,6 +18,7 @@ LOCAL_BACKUP_DIR="$PROJECT_ROOT/backups"
 
 # File Critici da forzare post-restore
 LOCAL_CADDYFILE="$PROJECT_ROOT/Caddyfile"
+LOCAL_SECRETS="$PROJECT_ROOT/secrets.env"
 
 # 2. Selezione del Backup
 if [ -n "$1" ]; then
@@ -77,7 +78,7 @@ fi
 # 5.2 Secrets
 if [ -f "$LOCAL_SECRETS" ]; then
     echo "✅ Aggiorno secrets.env..."
-    scp "$LOCAL_SECRETS" "$REMOTE_USER@$SERVER_HOST:~/homeassistant/secrets.env"
+    scp "$LOCAL_SECRETS" "$REMOTE_USER@$SERVER_HOST:~/secrets.env"
 else
     echo "❌ ERRORE: secrets.env locale mancante! Il deploy potrebbe fallire."
 fi

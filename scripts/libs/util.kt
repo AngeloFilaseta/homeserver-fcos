@@ -11,6 +11,7 @@ import java.io.File
  * @return The exit code of the process.
  * @throws IllegalStateException If the command fails and [ignoreFailure] is false.
  */
+
 fun run(
     vararg cmd: String,
     ignoreFailure: Boolean = false,
@@ -70,17 +71,15 @@ fun isMountPoint(path: String): Boolean =
  * Executes a command on a remote host via SSH.
  */
 fun runRemote(
-    remoteTarget: String,
     command: String,
     quiet: Boolean = false,
-): Boolean = run("ssh", remoteTarget, command, ignoreFailure = true, quiet = quiet) == 0
+): Boolean = run("ssh", Server.remoteTarget, command, ignoreFailure = true, quiet = quiet) == 0
 
 /**
  * Copies files or directories securely to a remote host via SCP.
  */
 fun scpRemote(
-    remoteTarget: String,
     localPath: String,
     remoteDest: String,
     quiet: Boolean = false,
-): Boolean = run("scp", "-r", localPath, "$remoteTarget:$remoteDest", ignoreFailure = true, quiet = quiet) == 0
+): Boolean = run("scp", "-r", localPath, "${Server.remoteTarget}:$remoteDest", ignoreFailure = true, quiet = quiet) == 0

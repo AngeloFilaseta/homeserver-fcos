@@ -1,0 +1,28 @@
+[Unit]
+Description=Journiv (Rootful System Container)
+After=network-online.target postgresql.service var-mnt-nas-secrets.mount
+Wants=network-online.target
+Requires=postgresql.service var-mnt-nas-secrets.mount
+RequiresMountsFor=/var/mnt/nas/secrets
+
+[Container]
+Image=docker.io/swalabtech/journiv-app:latest
+ContainerName=journiv
+AutoUpdate=registry
+
+EnvironmentFile=/var/mnt/nas/secrets/secrets.env
+Environment=TZ=Europe/Rome
+Environment=SECRET_KEY_FILE=/run/secrets/journiv_secret_key
+Environment=DOMAIN_NAME=192.168.1.100
+Environment=OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
+Environment=POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
+# Default app port advertised by the image.
+Environment=PORT=8000
+Network=host
+
+Volume=/var/mnt/nas/secrets:/run/secrets:ro
+
+[Install]
+WantedBy=multi-user.target
+

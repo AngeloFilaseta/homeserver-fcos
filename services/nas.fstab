@@ -1,3 +1,5 @@
 # Formato: <server:/export> <mountpoint> <type> <options> <dump> <pass>
 192.168.1.198:/volume1/media /var/mnt/nas/media nfs defaults,_netdev,noatime,timeo=14,retrans=3 0 2
 192.168.1.198:/volume1/smarthome /var/mnt/nas/smarthome nfs defaults,_netdev,noatime,timeo=14,retrans=3 0 2
+192.168.1.198:/volume1/secrets /var/mnt/nas/secrets nfs defaults,_netdev,noatime,timeo=14,retrans=3 0 2
+192.168.1.198:/volume1/db /var/mnt/nas/db nfs defaults,_netdev,noatime,timeo=14,retrans=3 0 2

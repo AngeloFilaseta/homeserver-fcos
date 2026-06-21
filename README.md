@@ -43,11 +43,11 @@ L'accesso al server avviene esclusivamente tramite chiavi SSH.
     ```
 
 ### B. Gestione Segreti
-Crea il file dei segreti partendo dal template fornito. Questo ti assicura di avere già i nomi delle variabili corretti.
+Il progetto usa un unico file condiviso per i segreti: `secrets.env`.
 
-```bash
-cp secrets.env.template secrets.env
-```
+Modificalo direttamente nella root del repository e mantienilo sincronizzato sul server tramite il deploy.
+
+Le variabili minime attese oggi sono quelle di PostgreSQL; puoi aggiungerne altre nello stesso file.
 
 ## 2. Installazione (Metodo ISO Automatica)
 
@@ -113,9 +113,17 @@ Il repository ora usa **un singolo file** per il mount NFS:
 **Struttura cartelle sul NAS:**
 ```
 /var/mnt/nas/smarthome/
-├── secrets.env                  # Variabili di ambiente (root)
 └── homeassistant/
     └── config/                  # Configurazione Home Assistant
+
+/var/mnt/nas/db/
+└── postgres/                    # Dati PostgreSQL
+
+/var/mnt/nas/secrets/
+├── secrets.env                   # Variabili di ambiente condivise
+├── journiv_secret_key            # Secret key Journiv
+├── oidc_client_secret            # OIDC client secret
+└── postgres_password             # Password DB per Journiv
 ```
 
 Prima del deploy, modifica `services/nas.fstab` con i tuoi export reali (server NAS, folder).
