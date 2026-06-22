@@ -16,8 +16,6 @@ val projectRoot =
 
 println("🚀 Inizio aggiornamento su: ${Server.host}")
 
-println("📂 Project Root rilevata: ${projectRoot.absolutePath}\n")
-
 // 0. Attesa e verifica mount NAS (con accesso per triggare automount)
 println("⏳ Attesa per il mount NAS...")
 var mountReady = false
@@ -71,6 +69,22 @@ if (servicesDir.exists() && servicesDir.isDirectory) {
     println("✅")
 } else {
     println("⚠️  ATTENZIONE: Cartella 'services' non trovata in locale!")
+    System.exit(1)
+}
+
+val confDir = File(projectRoot, "conf")
+if (confDir.exists() && confDir.isDirectory) {
+    print("📦 Sincronizzazione 'conf' direttamente su NAS... ")
+    runRemote("mkdir -p /var/mnt/nas/conf", quiet = true)
+    val ok = scpRemote("${confDir.absolutePath}/.", "/var/mnt/nas/conf/", quiet = true)
+    if (!ok) {
+        println("❌")
+        println("❌ Errore durante il trasferimento della cartella conf su /var/mnt/nas/conf")
+        System.exit(1)
+    }
+    println("✅")
+} else {
+    println("⚠️  ATTENZIONE: Cartella 'conf' non trovata in locale!")
     System.exit(1)
 }
 

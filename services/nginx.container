@@ -1,0 +1,22 @@
+[Unit]
+Description=Nginx (Rootful System Container)
+After=network-online.target var-mnt-nas-conf.mount
+Wants=network-online.target
+Requires=var-mnt-nas-conf.mount
+RequiresMountsFor=/var/mnt/nas/conf
+
+[Container]
+Image=docker.io/library/nginx:stable-alpine
+ContainerName=nginx
+AutoUpdate=registry
+
+Environment=TZ=Europe/Rome
+Network=host
+
+# Nginx config mounted from the NAS (edit path if stored elsewhere)
+Volume=/var/mnt/nas/conf/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+# TLS certificates directory
+Volume=/var/mnt/nas/conf/nginx/certs:/etc/nginx/certs:ro
+
+[Install]
+WantedBy=multi-user.target

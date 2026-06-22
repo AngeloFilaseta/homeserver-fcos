@@ -29,6 +29,7 @@ fun createDirectories() {
     sudo("mkdir", "-p", "$nasSmarthome/homeassistant/config")
     sudo("mkdir", "-p", nasSecretsDir)
     sudo("mkdir", "-p", "${Nas.BASE_MOUNT_POINT}/db/postgres")
+    sudo("mkdir", "-p", "${Nas.BASE_MOUNT_POINT}/conf")
 }
 
 fun syncSecretsToNas() {
@@ -95,7 +96,7 @@ fun installServices() {
         val name = file.name
         when {
             name.endsWith(".container") -> {
-                if (name == "homeassistant.container" || name == "postgresql.container" || name == "journiv.container") {
+                if (name == "homeassistant.container" || name == "postgresql.container" || name == "journiv.container" || name == "nginx.container") {
                     println("   -> Copia $name (System/Rootful)")
                     sudo("cp", file.absolutePath, sysConfigDir)
                 } else {
@@ -158,12 +159,10 @@ fun updateNasFstab() {
                     skip = true
                     false
                 }
-
                 line == FSTAB_MARKER_END -> {
                     skip = false
                     false
                 }
-
                 else -> {
                     !skip
                 }
@@ -211,6 +210,7 @@ fun reloadAndMount() {
     }
     systemctl("start", "var-mnt-nas-secrets.mount", ignoreFailure = true)
     systemctl("start", "var-mnt-nas-db.mount", ignoreFailure = true)
+    systemctl("start", "var-mnt-nas-conf.mount", ignoreFailure = true)
     systemctl("restart", "remote-fs.target", ignoreFailure = true)
 
     if (!isMountPoint(nasSmarthome)) {
@@ -227,6 +227,11 @@ fun reloadAndMount() {
         error("❌ $nasSecretsDir non montato. Verifica l'export NAS '/volume1/secrets'.")
     }
     println("✅ $nasSecretsDir montato correttamente.")
+
+    if (!isMountPoint("${Nas.BASE_MOUNT_POINT}/conf")) {
+        error("❌ ${Nas.BASE_MOUNT_POINT}/conf non montato. Verifica l'export NAS '/volume1/conf'.")
+    }
+    println("✅ ${Nas.BASE_MOUNT_POINT}/conf montato correttamente.")
 }
 
 // ─── Step 6: Services Restart ─────────────────────────────────────────────────
@@ -236,6 +241,7 @@ fun restartServices() {
     systemctl("restart", "postgresql.service", ignoreFailure = true)
     systemctl("restart", "journiv.service", ignoreFailure = true)
     systemctl("restart", "homeassistant.service", ignoreFailure = true)
+    systemctl("restart", "nginx.service", ignoreFailure = true)
 }
 
 // ─── Step 7: HACS Auto-Install ────────────────────────────────────────────────
@@ -312,9 +318,11 @@ val monitoredServices =
         "var-mnt-nas-media.mount",
         "var-mnt-nas-secrets.mount",
         "var-mnt-nas-db.mount",
+        "var-mnt-nas-conf.mount",
         "postgresql.service",
         "journiv.service",
         "homeassistant.service",
+        "nginx.service",
     )
 
 // ─── Orchestration ────────────────────────────────────────────────────────────
